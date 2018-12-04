@@ -10,7 +10,7 @@
   "author": "Abdelhedi hlel",
   "license": "ISC",
   "dependencies": {
-    "apollo-server": "^2.2.5",
+    "apollo-server": "^2.2.6",
     "dotenv": "^6.1.0",
     "graphql": "^14.0.2",
     "mongoose": "^5.3.14",
