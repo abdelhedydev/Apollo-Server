@@ -1,28 +1,69 @@
-const { ApolloServer } = require('apollo-server')
-const mongoose = require('mongoose')
-require('dotenv').config({ path: 'variables.env' })
+const { ApolloServer, gql } = require('apollo-server')
+const crypto = require('crypto')
+// we use crypto to generate id for our users
 
-const User = require('./models/User')
-const Todo = require('./models/Todo')
+const db = {
+  users: [
+    { id: '1', email: 'alex@gmail.com', name: 'Alex', avatarUrl: 'https://gravatar.com/...' },
+    { id: '2', email: 'max@gmail.com', name: 'Max', avatarUrl: 'https://gravatar.com/...' }
+  ],
+  messages: [
+    { id: '1', userId: '1', body: 'Hello', createdAt: Date.now() },
+    { id: '2', userId: '2', body: 'Hi', createdAt: Date.now() },
+    { id: '3', userId: '1', body: 'What\'s up?', createdAt: Date.now() }
+  ]
+}
 
-// for gql files
-const fs = require('fs')
-const path = require('path')
-const filePath = path.join(__dirname, 'typeDefs.gql')
-const typeDefs = fs.readFileSync(filePath, 'utf-8')
-mongoose
-  .connect(process.env.MONGO_DB_URL, { useNewUrlParser: true })
-  .then(() => console.log('DB connected'))
-  .catch(err => console.log(`error : ${err}`))
-
-const server = new ApolloServer({
-  typeDefs,
-  context: {
-    User,
-    Todo
+// Schema (typeDefs) is a convention
+const typeDefs = gql`
+  type Query {
+    users: [User!]!
+    user(id: ID!): User
+    messages: [Message!]!
   }
-})
+  type Mutation {
+    addUser(email: String!, name: String): User!
+  }
+  type User {
+    id: ID!
+    email: String!
+    name: String
+    avatarUrl: String
+    messages: [Message!]!
+  }
+  type Message {
+    id: ID!
+    body: String!
+    createdAt: String!
+  }
+`
 
-server.listen().then(({ url }) => {
-  console.log(`🚀  Server ready at ${url}`)
-})
+const resolvers = {
+  Query: {
+    users: () => db.users,
+    user: (root, { id }, info) => {
+      console.log('info', info)
+      return db.users.find(user => user.id === id)
+    },
+    messages: () => db.messages
+  },
+  Mutation: {
+    addUser: (root, { email, name }) => {
+      const user = {
+        id: crypto.randomBytes(10).toString('hex'),
+        email,
+        name
+      }
+      console.log('user', user)
+      db.users.push(user)
+      return user
+    }
+  },
+  User: {
+    messages: (user) => db.messages.filter(message => message.userId === user.id)
+  }
+}
+
+const server = new ApolloServer({ typeDefs, resolvers })
+
+server.listen().then(({ url }) => console.log(url))
